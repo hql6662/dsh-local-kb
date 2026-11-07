@@ -1,0 +1,59 @@
+{
+  "name": "dsh-local-kb",
+  "version": "0.1.0",
+  "description": "Local full-disk knowledge base for DSH: indexes C:/ and E:/ documents (PDF/MD/TXT/DOCX/PPTX/XLSX/EPUB/...) into a SQLite FTS5 trigram index, exposes a searchable sidebar panel and a token-efficient `kb` agent tool.",
+  "type": "module",
+  "main": "index.js",
+  "icon": "assets/icon-180.png",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./assets/icon-180.png"
+  },
+  "files": [
+    "index.js",
+    "host",
+    "client.js",
+    "tools",
+    "cordis.patch.yml",
+    "icon.svg",
+    "assets",
+    "locale",
+    "screenshots.json",
+    "screenshots",
+    "README.md",
+    "INDEX.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node test/smoke.mjs",
+    "pack:check": "npm pack --dry-run"
+  },
+  "engines": { "node": ">=22.0.0" },
+  "license": "MIT",
+  "author": "hejiwan77",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hejiwan77-byte/dsh-local-kb.git"
+  },
+  "homepage": "https://github.com/hejiwan77-byte/dsh-local-kb#readme",
+  "bugs": { "url": "https://github.com/hejiwan77-byte/dsh-local-kb/issues" },
+  "keywords": ["dsh", "dsh-plugin", "knowledge-base", "full-text-search", "fts5", "local", "sidebar"],
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-session",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-locale"
+      ]
+    }
+  }
+}
