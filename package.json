@@ -33,13 +33,13 @@
   },
   "engines": { "node": ">=22.0.0" },
   "license": "MIT",
-  "author": "hejiwan77",
+  "author": "hql6662",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/hejiwan77-byte/dsh-local-kb.git"
+    "url": "git+https://github.com/hql6662/dsh-local-kb.git"
   },
-  "homepage": "https://github.com/hejiwan77-byte/dsh-local-kb#readme",
-  "bugs": { "url": "https://github.com/hejiwan77-byte/dsh-local-kb/issues" },
+  "homepage": "https://github.com/hql6662/dsh-local-kb#readme",
+  "bugs": { "url": "https://github.com/hql6662/dsh-local-kb/issues" },
   "keywords": ["dsh", "dsh-plugin", "knowledge-base", "full-text-search", "fts5", "local", "sidebar"],
   "dsh": {
     "bundle": { "patch": "./cordis.patch.yml" },
