@@ -8,10 +8,13 @@ window.__ModuleLoader__.load({
     const ZH = {
       label: '本地知识库',
       title: '本地知识库',
-      subtitle: '全盘 C: / E: 文档索引 · 只检索片段，不把整库读进上下文',
-      searchPlaceholder: '搜索文档内容或文件名…（中文 3 字以上走全文索引）',
+      subtitle: '全盘 C: / E: 文档索引 · 文件名 / 正文 / 路径都可搜 · 只返回片段，不把整库读进上下文',
+      searchPlaceholder: '搜索文件名、正文或路径目录…（中文 3 字以上走全文索引）',
       search: '搜索',
       searching: '检索中…',
+      browse: '浏览',
+      browseHint: '不知道文件名和内容？留空关键词，按时间 / 目录 / 类型翻一翻',
+      browseInfo: '浏览最近文件 · 共 {total} 条 · {ms}ms',
       allTypes: '全部类型',
       allCategory: '全部分类',
       allRoot: '全部磁盘',
@@ -57,14 +60,57 @@ window.__ModuleLoader__.load({
       byExt: '按类型',
       byCategory: '按分类',
       byRoot: '按磁盘',
+      pathFilter: '路径含…',
+      pathPlaceholder: 'Desktop / 实验三 / xwechat',
+      allDays: '不限时间',
+      days7: '最近 7 天',
+      days30: '最近 30 天',
+      days365: '最近 1 年',
+      sortRel: '按相关度',
+      sortMtime: '按修改时间',
+      sortName: '按名称',
+      // content classification
+      aiLabel: 'AI 批量识别',
+      aiLabeling: '唤起中…',
+      aiLabelStarted: '已唤起 DSH Agent 做内容识别，完成后回来刷新即可',
+      aiLabelFailed: '唤起失败',
+      usefulHigh: '高价值',
+      usefulPossible: '待定',
+      usefulLow: '低价值/噪声',
+      allUseful: '全部有用度',
+      topicStudy: '学习', topicWork: '工作', topicCode: '代码',
+      topicLife: '生活', topicReference: '资料', topicOther: '其他',
+      allTopic: '全部主题',
+      allSrc: '全部来源',
+      labelSrcAi: '仅 AI 标注',
+      labelSrcRule: '仅规则标注',
+      labelStats: '高价值 {high} · 待定 {possible} · 低价值 {low} · AI 已标 {ai}',
+      setHigh: '标为高价值',
+      setLow: '标为低价值',
+      labeled: '已标注',
+      classifyHint: '规则已给全部文档预打「有用度 + 主题」双标签；点「AI 批量识别」让 Agent 复核（首次会看得更细，之后只处理新增文件）',
+      fullPass: '首次全量识别',
+      incrementalPass: '增量识别',
+      modeFull: '首次全量（不省 token）',
+      modeIncremental: '增量（省 token）',
+      firstPassPending: '首次全量识别未完成 · 点「AI 批量识别」放开跑一轮',
+      firstPassDone: '首次全量已完成 · 之后只识别新增文件',
+      pendingNew: '{n} 篇新增待识别',
+      markFirstPassDone: '标记首次全量已完成',
+      firstPassMarked: '已记录：之后重建只识别新增文件',
+      rerunFull: '重新全量识别',
+      toggleFirstPassHint: '点击切换：未完成 = 下次跑首次全量；已完成 = 只识别新增文件',
     };
     const EN = {
       label: 'Local KB',
       title: 'Local Knowledge Base',
-      subtitle: 'Full-disk C: / E: document index · snippets only, never the whole corpus in context',
-      searchPlaceholder: 'Search document contents or filenames…',
+      subtitle: 'Full-disk C: / E: index · searchable name + body + path · snippets only, never the whole corpus in context',
+      searchPlaceholder: 'Search filenames, text, or folder names…',
       search: 'Search',
       searching: 'Searching…',
+      browse: 'Browse',
+      browseHint: 'No filename and no content? Leave the query empty and flip through by time / folder / type',
+      browseInfo: 'Recent files · {total} · {ms}ms',
       allTypes: 'All types',
       allCategory: 'All categories',
       allRoot: 'All drives',
@@ -110,7 +156,76 @@ window.__ModuleLoader__.load({
       byExt: 'By type',
       byCategory: 'By category',
       byRoot: 'By drive',
+      pathFilter: 'Path has…',
+      pathPlaceholder: 'Desktop / notes / work',
+      allDays: 'Any time',
+      days7: 'Last 7 days',
+      days30: 'Last 30 days',
+      days365: 'Last year',
+      sortRel: 'Relevance',
+      sortMtime: 'Modified',
+      sortName: 'Name',
+      // content classification
+      aiLabel: 'AI classify',
+      aiLabeling: 'Starting…',
+      aiLabelStarted: 'DSH Agent started classifying. Refresh here when it finishes.',
+      aiLabelFailed: 'Failed to start',
+      usefulHigh: 'High value',
+      usefulPossible: 'Uncertain',
+      usefulLow: 'Low / noise',
+      allUseful: 'All usefulness',
+      topicStudy: 'Study', topicWork: 'Work', topicCode: 'Code',
+      topicLife: 'Life', topicReference: 'Reference', topicOther: 'Other',
+      allTopic: 'All topics',
+      allSrc: 'All sources',
+      labelSrcAi: 'AI-labeled only',
+      labelSrcRule: 'Rule-labeled only',
+      labelStats: 'High {high} · Uncertain {possible} · Low {low} · AI-labeled {ai}',
+      setHigh: 'Mark high value',
+      setLow: 'Mark low value',
+      labeled: 'Labeled',
+      classifyHint: 'A zero-cost rule baseline tags every doc; click "AI classify" to have the Agent review them (thorough the first time, incremental afterwards)',
+      fullPass: 'First full pass',
+      incrementalPass: 'Incremental pass',
+      modeFull: 'Full pass (no token limit)',
+      modeIncremental: 'Incremental (token-saving)',
+      firstPassPending: 'First full pass not finished yet — click "AI classify" and let it run',
+      firstPassDone: 'First full pass done — later passes only review new files',
+      pendingNew: '{n} new docs to review',
+      markFirstPassDone: 'Mark first pass done',
+      firstPassMarked: 'Recorded: rebuilds will only review new files',
+      rerunFull: 'Run a full pass again',
+      toggleFirstPassHint: 'Click to toggle: unfinished = next run is a thorough full pass; finished = only new files',
     };
+
+    // Two-tier prompt: the first pass after a fresh index may spend tokens
+    // (it is the only chance to classify everything properly); every later
+    // pass is incremental and must stay cheap.
+    function buildAiPrompt(status) {
+      const first = !status || !status.firstPassDone;
+      if (first) {
+        return `你是「本地知识库」的内容识别助手。**这是首次全量识别**：目标是把全盘文档尽量都打上双标签，这一轮不用刻意省 token。
+
+标签：useful（high=确实有用/值得保留、possible=拿不准、low=噪声/缓存/临时/重复）+ topic（study/work/code/life/reference/other）。
+
+流程：
+1. kb {"action":"candidates","limit":50} —— 首次返回的是全量队列（按「高价值→长文→新」排序），每条含 id/文件名/路径/开头 400 字。
+2. 逐条判断 useful 与 topic，给 ≤20 字 why。**拿不准时可以放心调用** kb {"action":"get","id":...,"max":3000} 读正文再判——这一轮读正文是允许的。
+3. 用 ONE 次 kb {"action":"label","items":[{"id":1,"useful":"high","topic":"study","why":"课程实验报告"}, ...]} 把整批写回（一次 30-50 条），这是最省往返的方式。
+4. 重复 1-3 直到 kb {"action":"candidates"} 返回 0 条，或覆盖了主要目录（可换 "q2":"目录关键词" 推进不同分区）。
+5. 完成后调用 kb {"action":"label-status","reset":false} 记录首次全量已完成 —— 这一步很关键：之后每次重建就只会识别新增文件了。
+
+注意：已有 AI 标注的文档也会出现在首次队列里，如果发现规则判错就直接改。`;
+      }
+      return `你是「本地知识库」的内容识别助手。**这是增量识别**（首次全量已完成）：只处理上次之后新增/变动的文件，务必省 token。
+
+1. kb {"action":"candidates"} —— 默认就是增量模式：只返回还没有 AI 标注的文档，每条只有 id/文件名/路径/开头 200 字，**不含正文**。
+2. 只看 id/name/path/head 判断 useful（high/possible/low）与 topic（study/work/code/life/reference/other），给 ≤20 字 why。
+3. 用 ONE 次 kb {"action":"label","items":[...]} 批量写回（一次 30-50 条）。
+4. 重复直到返回 0 条。绝大多数情况下**不要**调用 get 读正文；除非某个文件明显很重要但开头完全看不出内容，才用 max=1500 看一眼。
+
+完成后简短汇报共标注多少条即可。`;
+    }
 
     const CSS = `
 .kb-page {
@@ -169,11 +284,26 @@ window.__ModuleLoader__.load({
 .kb-select { border: 1px solid var(--kb-border-strong); background: var(--kb-card); color: var(--kb-text);
   border-radius: 10px; padding: 10px 12px; font-size: 13px; font-family: inherit; outline: 0; }
 .kb-select:focus { border-color: var(--kb-accent); }
+.kb-input--sm { border: 1px solid var(--kb-border-strong); background: var(--kb-card);
+  color: var(--kb-text); border-radius: 10px; padding: 10px 12px; font-size: 13px;
+  font-family: inherit; outline: 0; width: 150px; }
+.kb-input--sm:focus { border-color: var(--kb-accent); }
+.kb-input--sm::placeholder { color: var(--kb-muted); }
+.kb-chip--high { background: rgba(22,163,74,.14); color: #15803d; }
+.kb-chip--low { background: rgba(107,114,128,.14); color: var(--kb-muted); }
+.kb-chip--possible { background: rgba(217,150,0,.13); color: #a16207; }
+.kb-chip--topic { background: rgba(34,184,207,.15); color: #0e7490; text-transform: none; letter-spacing: 0; }
+.kb-chip--ai { background: rgba(109,94,252,.15); color: var(--kb-accent); }
+.kb-btn--ai { background: linear-gradient(120deg, rgba(109,94,252,.16), rgba(34,184,207,.16));
+  border-color: var(--kb-accent); color: var(--kb-accent); font-weight: 600; }
+.kb-hint { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--kb-muted);
+  margin: -4px 0 12px; }
 
 .kb-meta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--kb-muted); margin-bottom: 10px; }
 .kb-tag { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px;
   background: var(--kb-card-2); border: 1px solid var(--kb-border); font-size: 11px; }
 .kb-tag--ok { color: var(--kb-ok); }
+.kb-tag--warn { color: #b45309; border-color: rgba(180,83,9,.35); background: rgba(245,158,11,.10); }
 .kb-tag--err { color: var(--kb-err); }
 .kb-errbar { padding: 12px 16px; border: 1px solid var(--kb-err); border-radius: 12px;
   background: rgba(220,38,38,0.06); color: var(--kb-err); font-size: 13px; margin-bottom: 14px; }
@@ -306,13 +436,25 @@ window.__ModuleLoader__.load({
         active ? h('circle', { cx: 19, cy: 5, r: 2.2, fill: color }) : null);
     }
 
+    const USEFUL_CLASS = { high: 'kb-chip--high', possible: 'kb-chip--possible', low: 'kb-chip--low' };
+    function usefulLabel(v, t) {
+      return v === 'high' ? t('usefulHigh') : v === 'low' ? t('usefulLow') : t('usefulPossible');
+    }
+    function topicLabel(v, t) {
+      const map = { study: 'topicStudy', work: 'topicWork', code: 'topicCode',
+        life: 'topicLife', reference: 'topicReference', other: 'topicOther' };
+      return t(map[v] || 'topicOther');
+    }
+
     function createMainPanel(ctx, t) {
       return function MainPanel() {
         const [stats, setStats] = React.useState(null);
         const [config, setConfig] = React.useState(null);
         const [query, setQuery] = React.useState('');
         const [submitted, setSubmitted] = React.useState('');
-        const [filters, setFilters] = React.useState({ ext: '', category: '', root: '' });
+        const [filters, setFilters] = React.useState(
+          { ext: '', category: '', root: '', path: '', days: '', sort: '',
+            useful: '', topic: '', labelSrc: '' });
         const [result, setResult] = React.useState(null);
         const [loading, setLoading] = React.useState(false);
         const [error, setError] = React.useState('');
@@ -322,6 +464,8 @@ window.__ModuleLoader__.load({
         const [settingsOpen, setSettingsOpen] = React.useState(false);
         const [rebuild, setRebuild] = React.useState({ running: false, ok: null, error: '', finishedAt: 0 });
         const [toast, setToast] = React.useState('');
+        const [aiBusy, setAiBusy] = React.useState(false);
+        const [labelStatus, setLabelStatus] = React.useState(null);
         const inputRef = React.useRef(null);
         const pollRef = React.useRef(null);
 
@@ -339,6 +483,7 @@ window.__ModuleLoader__.load({
             setConfig(c.config || null);
           } catch (e) { setError(String(e.message || e)); }
           try { const r = await api('rebuild/status'); setRebuild(r); } catch { /* ignore */ }
+          try { const ls = await api('labels/status'); setLabelStatus(ls.ok ? ls : null); } catch { /* ignore */ }
         }
 
         React.useEffect(() => {
@@ -364,13 +509,19 @@ window.__ModuleLoader__.load({
           return () => { if (pollRef.current) window.clearInterval(pollRef.current); };
         }, [rebuild.running]);
 
+        function paramsFor(q, nextOffset) {
+          return { q, limit, offset: nextOffset,
+            ext: filters.ext, category: filters.category, root: filters.root,
+            path: filters.path, days: filters.days, sort: filters.sort,
+            useful: filters.useful, topic: filters.topic, labelSrc: filters.labelSrc };
+        }
+
         async function runSearch(nextOffset = 0) {
           const q = (submitted || query).trim();
-          if (!q) { flash(t('emptyQuery')); return; }
+          // Empty query = BROWSE (recent files). Never block it.
           setLoading(true); setError(''); setOffset(nextOffset);
           try {
-            const r = await api('search' + qs({ q, limit, offset: nextOffset,
-              ext: filters.ext, category: filters.category, root: filters.root }));
+            const r = await api('search' + qs(paramsFor(q, nextOffset)));
             setResult(r);
           } catch (e) { setError(String(e.message || e)); setResult(null); }
           finally { setLoading(false); }
@@ -378,13 +529,19 @@ window.__ModuleLoader__.load({
 
         function submit(e) {
           e?.preventDefault?.();
-          setSubmitted(query.trim());
-          // run on next tick so submitted state is visible; call directly with query.
           const q = query.trim();
-          if (!q) { flash(t('emptyQuery')); return; }
+          setSubmitted(q);
           setLoading(true); setError(''); setOffset(0);
-          api('search' + qs({ q, limit, offset: 0,
-            ext: filters.ext, category: filters.category, root: filters.root }))
+          api('search' + qs(paramsFor(q, 0)))
+            .then((r) => setResult(r))
+            .catch((err) => { setError(String(err.message || err)); setResult(null); })
+            .finally(() => setLoading(false));
+        }
+
+        function doBrowse() {
+          setQuery(''); setSubmitted('');
+          setLoading(true); setError(''); setOffset(0);
+          api('search' + qs(paramsFor('', 0)))
             .then((r) => setResult(r))
             .catch((err) => { setError(String(err.message || err)); setResult(null); })
             .finally(() => setLoading(false));
@@ -423,6 +580,69 @@ window.__ModuleLoader__.load({
           catch { flash(p); }
         }
 
+        // One-click: open a DSH Agent session. The FIRST run is a thorough full
+        // pass (tokens are fine there); later runs are incremental and cheap.
+        async function aiClassify() {
+          setAiBusy(true);
+          const sessions = ctx.get?.('sessions') ?? ctx.sessions;
+          const ui = ctx.get?.('uiWorkspace') ?? ctx.uiWorkspace;
+          const prompt = buildAiPrompt(labelStatus);
+          let lastError = null;
+          try {
+            if (sessions?.create && sessions?.using) {
+              try {
+                const sessionId = await sessions.create({});
+                await sessions.using(sessionId, { source: 'gateway' }, async (ref) => {
+                  const r = await ref.binding.session.prompt([{ type: 'text', text: prompt }], 'queue');
+                  if (!r?.ok) throw new Error(r?.error?.message || 'send failed');
+                });
+                try { ui?.openSession?.(sessionId); } catch { /* not fatal */ }
+                // The Agent records completion itself; if this was the first
+                // full pass, remember it here too so later runs stay cheap
+                // even if the Agent forgets.
+                if (labelStatus && !labelStatus.firstPassDone) {
+                  try { await api('labels/first-pass', { method: 'POST', body: JSON.stringify({}) }); } catch { /* ignore */ }
+                  try { setLabelStatus(await api('labels/status')); } catch { /* ignore */ }
+                }
+                flash(labelStatus && !labelStatus.firstPassDone ? t('firstPassMarked') : t('aiLabelStarted'));
+                return;
+              } catch (error) { lastError = error; }
+            }
+            if (ui?.startSession) {
+              ui.startSession(undefined, { prompt, whenDraftExists: 'replace' });
+              flash(t('aiLabelStarted'));
+              return;
+            }
+            throw lastError || new Error('no session api');
+          } catch (e) {
+            flash(t('aiLabelFailed') + '：' + String(e?.message || e));
+          } finally { setAiBusy(false); }
+        }
+
+        // Flip the first-pass flag by hand (for example after a manual run).
+        async function toggleFirstPass() {
+          try {
+            const next = !(labelStatus && labelStatus.firstPassDone);
+            await api('labels/first-pass', { method: 'POST', body: JSON.stringify({ reset: !next }) });
+            setLabelStatus(await api('labels/status'));
+            flash(next ? t('firstPassMarked') : t('rerunFull'));
+          } catch (e) { flash(String(e?.message || e)); }
+        }
+
+        // Quick per-document label from the preview drawer.
+        async function quickLabel(useful) {
+          if (!preview) return;
+          try {
+            await api('labels', { method: 'POST', body: JSON.stringify({
+              items: [{ id: preview.id, useful, topic: preview.topic, why: 'panel quick label' }] }) });
+            setPreview((p) => p ? { ...p, useful, labelSrc: 'ai' } : p);
+            setResult((r) => r ? { ...r, results: r.results.map((x) =>
+              x.id === preview.id ? { ...x, useful, labelSrc: 'ai' } : x) } : r);
+            flash(t('labeled'));
+            loadMeta();
+          } catch (e) { flash(String(e?.message || e)); }
+        }
+
         const exts = stats?.byExt ? Object.keys(stats.byExt) : [];
         const ready = Boolean(stats?.ok);
         const builtAt = stats?.meta?.built_at || '';
@@ -453,6 +673,11 @@ window.__ModuleLoader__.load({
               h('button', { type: 'submit', className: 'kb-btn kb-btn--primary', disabled: loading },
                 loading ? h('span', { className: 'kb-spin' }) : null,
                 loading ? t('searching') : t('search')),
+              h('button', { type: 'button', className: 'kb-btn kb-btn--ghost', onClick: doBrowse, disabled: loading },
+                t('browse')),
+              h('input', { className: 'kb-input--sm', value: filters.path,
+                placeholder: t('pathPlaceholder'),
+                onChange: (e) => setFilters((o) => ({ ...o, path: e.target.value })) }),
               h('select', { className: 'kb-select', value: filters.ext,
                 onChange: (e) => setFilters((o) => ({ ...o, ext: e.target.value })) },
                 h('option', { value: '' }, t('allTypes')),
@@ -467,10 +692,43 @@ window.__ModuleLoader__.load({
                 h('option', { value: '' }, t('allRoot')),
                 h('option', { value: 'C:' }, 'C:'),
                 h('option', { value: 'E:' }, 'E:')),
+              h('select', { className: 'kb-select', value: filters.days,
+                onChange: (e) => setFilters((o) => ({ ...o, days: e.target.value })) },
+                h('option', { value: '' }, t('allDays')),
+                h('option', { value: '7' }, t('days7')),
+                h('option', { value: '30' }, t('days30')),
+                h('option', { value: '365' }, t('days365'))),
+              h('select', { className: 'kb-select', value: filters.sort,
+                onChange: (e) => setFilters((o) => ({ ...o, sort: e.target.value })) },
+                h('option', { value: '' }, t('sortRel')),
+                h('option', { value: 'mtime' }, t('sortMtime')),
+                h('option', { value: 'name' }, t('sortName'))),
+              h('select', { className: 'kb-select', value: filters.useful,
+                onChange: (e) => setFilters((o) => ({ ...o, useful: e.target.value })) },
+                h('option', { value: '' }, t('allUseful')),
+                h('option', { value: 'high' }, t('usefulHigh')),
+                h('option', { value: 'possible' }, t('usefulPossible')),
+                h('option', { value: 'low' }, t('usefulLow'))),
+              h('select', { className: 'kb-select', value: filters.topic,
+                onChange: (e) => setFilters((o) => ({ ...o, topic: e.target.value })) },
+                h('option', { value: '' }, t('allTopic')),
+                ['study', 'work', 'code', 'life', 'reference', 'other'].map((v) =>
+                  h('option', { key: v, value: v }, topicLabel(v, t)))),
+              h('select', { className: 'kb-select', value: filters.labelSrc,
+                onChange: (e) => setFilters((o) => ({ ...o, labelSrc: e.target.value })) },
+                h('option', { value: '' }, t('allSrc')),
+                h('option', { value: 'ai' }, t('labelSrcAi')),
+                h('option', { value: 'rule' }, t('labelSrcRule'))),
+              h('button', { type: 'button', className: 'kb-btn kb-btn--ai', onClick: aiClassify, disabled: aiBusy },
+                aiBusy ? h('span', { className: 'kb-spin' }) : null,
+                aiBusy ? t('aiLabeling')
+                  : (labelStatus && !labelStatus.firstPassDone ? t('fullPass') : t('incrementalPass'))),
               h('button', { type: 'button', className: 'kb-btn kb-btn--ghost', onClick: () => setSettingsOpen(true) }, t('settings')),
               h('button', { type: 'button', className: 'kb-btn', onClick: doRebuild, disabled: rebuild.running },
                 rebuild.running ? h('span', { className: 'kb-spin' }) : null,
                 rebuild.running ? t('rebuilding') : t('rebuild'))),
+            // ---- "don't know the name or content" hint
+            h('div', { className: 'kb-hint' }, t('browseHint') + ' · ' + t('classifyHint')),
             // ---- status line
             h('div', { className: 'kb-meta' },
               h('span', { className: 'kb-tag' + (ready ? ' kb-tag--ok' : ' kb-tag--err') },
@@ -479,12 +737,27 @@ window.__ModuleLoader__.load({
                 t('personal') + ' ' + fmt(stats.byCategory.personal) + ' · ' + t('dev') + ' ' + fmt(stats.byCategory.dev)) : null,
               stats?.byRoot ? h('span', { className: 'kb-tag' }, t('byRoot') + ' ' +
                 Object.entries(stats.byRoot).map(([k, v]) => k + ' ' + fmt(v)).join(' · ')) : null,
+              labelStatus ? h('span', {
+                className: 'kb-tag' + (labelStatus.firstPassDone ? '' : ' kb-tag--warn'),
+                title: t('toggleFirstPassHint') || '',
+                onClick: toggleFirstPass,
+                style: { cursor: 'pointer' },
+              }, labelStatus.firstPassDone
+                ? t('firstPassDone') + (labelStatus.pendingNew ? ' · ' + t('pendingNew').replace('{n}', fmt(labelStatus.pendingNew)) : '')
+                : t('firstPassPending')) : null,
+              stats?.byUseful ? h('span', { className: 'kb-tag' }, t('labelStats')
+                .replace('{high}', fmt(stats.byUseful.high))
+                .replace('{possible}', fmt(stats.byUseful.possible))
+                .replace('{low}', fmt(stats.byUseful.low))
+                .replace('{ai}', fmt(stats.aiLabels))) : null,
               rebuild.ok === false ? h('span', { className: 'kb-tag kb-tag--err' }, rebuild.error || t('rebuildFailed')) : null),
             error ? h('div', { className: 'kb-errbar' }, error) : null,
             // ---- results
             result ? h('div', { className: 'kb-meta' },
-              h('span', null, t('resultsInfo')
-                .replace('{total}', result.total).replace('{ms}', result.elapsedMs).replace('{mode}', result.mode)),
+              h('span', null, result.mode === 'browse'
+                ? t('browseInfo').replace('{total}', result.total).replace('{ms}', result.elapsedMs)
+                : t('resultsInfo')
+                    .replace('{total}', result.total).replace('{ms}', result.elapsedMs).replace('{mode}', result.mode)),
               h('span', null, t('hintGet'))) : null,
             result && result.results.length
               ? h('div', { className: 'kb-results' },
@@ -494,6 +767,9 @@ window.__ModuleLoader__.load({
                         h('span', { className: 'kb-card__name' }, r.name),
                         h('span', { className: 'kb-chip' }, '.' + r.ext),
                         h('span', { className: 'kb-chip kb-chip--gray' }, r.category === 'dev' ? t('dev') : t('personal')),
+                        h('span', { className: 'kb-chip ' + (USEFUL_CLASS[r.useful] || 'kb-chip--possible') }, usefulLabel(r.useful, t)),
+                        h('span', { className: 'kb-chip kb-chip--topic' }, topicLabel(r.topic, t)),
+                        r.labelSrc === 'ai' ? h('span', { className: 'kb-chip kb-chip--ai' }, 'AI') : null,
                         statusText(r.status, t) ? h('span', { className: 'kb-chip kb-chip--gray' }, statusText(r.status, t)) : null),
                       h('p', { className: 'kb-card__path' }, r.path),
                       r.snippet ? h('p', { className: 'kb-card__snip' }, renderSnippet(r.snippet)) : null,
@@ -528,8 +804,15 @@ window.__ModuleLoader__.load({
                   : h('div', null,
                       h('div', { className: 'kb-meta' },
                         h('span', { className: 'kb-tag' }, '.' + preview.ext),
+                        h('span', { className: 'kb-chip ' + (USEFUL_CLASS[preview.useful] || 'kb-chip--possible') }, usefulLabel(preview.useful, t)),
+                        h('span', { className: 'kb-chip kb-chip--topic' }, topicLabel(preview.topic, t)),
+                        preview.labelSrc === 'ai' ? h('span', { className: 'kb-chip kb-chip--ai' }, 'AI') : null,
+                        preview.labelWhy ? h('span', { style: { fontSize: 12, color: 'var(--kb-muted)' } }, preview.labelWhy) : null,
                         h('span', null, t('bodyChars').replace('{n}', fmt(preview.bodyChars || 0)) +
                           (preview.bodyTruncated ? ' ' + t('truncated') : ''))),
+                      h('div', { className: 'kb-meta', style: { marginTop: 8 } },
+                        h('button', { className: 'kb-btn kb-btn--sm', onClick: () => quickLabel('high') }, t('setHigh')),
+                        h('button', { className: 'kb-btn kb-btn--sm', onClick: () => quickLabel('low') }, t('setLow'))),
                       h('pre', { className: 'kb-pre' }, preview.body || (preview.error || '')))),
               h('div', { className: 'kb-drawer__foot' },
                 h('button', { className: 'kb-btn kb-btn--primary kb-btn--sm',

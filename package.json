@@ -1,6 +1,6 @@
 {
   "name": "dsh-local-kb",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Local full-disk knowledge base for DSH: indexes C:/ and E:/ documents (PDF/MD/TXT/DOCX/PPTX/XLSX/EPUB/...) into a SQLite FTS5 trigram index, exposes a searchable sidebar panel and a token-efficient `kb` agent tool.",
   "type": "module",
   "main": "index.js",

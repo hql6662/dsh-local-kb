@@ -15,16 +15,26 @@ import sys, os, io, re, json, time, sqlite3, zipfile, argparse, html, traceback
 BUNDLED_SP = r"C:\Users\hql\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\python\Lib\site-packages"
 if os.path.isdir(BUNDLED_SP):
     sys.path.append(BUNDLED_SP)
+# tools/ is on sys.path when run as a script; add it explicitly for imports too.
+TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
+if TOOLS_DIR not in sys.path:
+    sys.path.insert(0, TOOLS_DIR)
+import extra_extract  # noqa: E402  (ebook + Office extractors, vendored libs)
 
 EXTS = {
     '.md', '.markdown', '.txt', '.rst', '.html', '.htm', '.json', '.yaml', '.yml',
     '.csv', '.tsv', '.log', '.epub', '.pdf', '.docx', '.doc', '.pptx', '.ppt',
     '.xlsx', '.xls',
 }
-# Only these are given full text extraction; the rest keep a name-only stub.
-EXTRACTABLE = {'.md', '.markdown', '.txt', '.rst', '.html', '.htm', '.json',
-               '.yaml', '.yml', '.csv', '.tsv', '.log', '.epub', '.pdf',
-               '.docx', '.pptx', '.xlsx'}
+# Add ebook + Office variants handled by extra_extract: .mobi/.azw*, .chm,
+# .rtf, .tex, .fb2, ODF, and OOXML template/macro variants. Note the disk also
+# contains .pdb/.key/.pot/.dot which are NOT documents (debug symbols, gettext
+# templates, encryption keys, graphviz) and are deliberately excluded.
+EXTS = EXTS | extra_extract.EXTS
+# Extraction is dispatched by EXTRACTORS (original formats) plus the
+# extra_extract dispatcher (everything in extra_extract.EXTS). Anything not in
+# either set falls back to a name-only stub, so no raw body ever leaks.
+EXTRACTABLE = EXTS
 # Directories that are pure machine caches / code deps. Value documents are kept.
 # Only machine internals that cannot contain user documents are skipped.
 # AppData / .workbuddy / .pi / .vscode / .dsh / caches ARE scanned, because the
@@ -42,6 +52,12 @@ SKIP_DIRS = {
 ALLOW_DIRS = {'Desktop', 'Documents', 'MyFiles', 'OneDrive', 'WPS Cloud',
               'StudyMate', 'Qianwen', 'WorkBuddy', 'dsh files', 'ws',
               'pi history', 'Users'}
+# Transient scratch dirs produced by the extractor's own probes (COM / CHM /
+# MOBI debugging). They are not user documents and pollute "recent files".
+SKIP_DIR_PREFIXES = ('kbdbg_', 'kbenv_', 'kbdiag_', 'kbsmall', 'kbprobe',
+                     'kbvenv', 'kbword', 'kb_fts_', 'mobiext',
+                     'kbcnt_', 'kboffice_', 'kbchm_', 'kbloop_', 'kbparse',
+                     'kbscope', 'kbtest', 'dsh-subprocess-')
 CODE_EXTS = {'.js', '.ts', '.tsx', '.jsx', '.mjs', '.cjs', '.py', '.java',
              '.go', '.rs', '.c', '.h', '.cpp', '.hpp', '.cs', '.rb', '.php',
              '.sh', '.bat', '.ps1', '.sql', '.css', '.scss', '.less', '.xml',
@@ -162,6 +178,71 @@ def classify(path, root, ext):
         return 'dev'
     return 'personal'
 
+# ------------------------------------------------------------------ labels
+# Zero-cost rule-based "is it useful / what topic" tagging. This is the
+# baseline that works immediately, with NO model tokens. AI can later override
+# any of these per-path via labels.sqlite (see host/kb.js).
+USEFUL = ('high', 'possible', 'low')
+TOPICS = ('study', 'work', 'code', 'life', 'reference', 'other')
+
+def classify_labels(path, name, ext, category, size, status, chars, head):
+    low = path.lower()
+    nm = name.lower()
+    # ---- topic: from directory / filename keywords -------------------------
+    topic = 'other'
+    if any(k in low for k in ('/study', '/textbook', '/course', '/学习/', '/教材/',
+                              '/课程/', '/论文/', '/实验报告/', '/读书/', '/笔记/',
+                              '/study', '/homework', '/作业/', '/考试/', '/考研/')):
+        topic = 'study'
+    elif any(k in low for k in ('/codeproject', '/src/', '/repo', '/github',
+                                '/node_modules/', '/.git/', '/workspace/', '/ws/',
+                                '/code/', '/项目源码', '/dev/')) or ext in (
+                                    '.js', '.ts', '.py', '.java', '.go', '.c',
+                                    '.cpp', '.h', '.cs', '.sh', '.ps1', '.sql'):
+        topic = 'code'
+    elif any(k in low for k in ('/01-work', '/work/', '/办公/', '/工作/',
+                                '/报告/', '/会议/', '/合同/', '/客户/', '/简历/',
+                                '/project/', '/实习/')):
+        topic = 'work'
+    elif any(k in low for k in ('/manual', '/reference', '/guide', '/api/',
+                                '/手册', '/帮助', '/docs/', '/documentation',
+                                '/说明', '/spec/')) or ext in ('.chm',):
+        topic = 'reference'
+    elif any(k in low for k in ('/生活/', '/照片/', '/账单/', '/医疗/', '/旅行/',
+                                '/photo/', '/bill/', '/health/')):
+        topic = 'life'
+    if topic == 'other' and any(k in nm for k in ('论文', '实验', '笔记', '读书',
+                                                  '教材', '课件', '作业', '复习')):
+        topic = 'study'
+    if topic == 'other' and any(k in nm for k in ('手册', '指南', '说明', 'api',
+                                                  'reference', 'spec')):
+        topic = 'reference'
+    if topic == 'other' and any(k in nm for k in ('报告', '总结', '计划', '合同',
+                                                  '会议', '简历')):
+        topic = 'work'
+    # ---- useful: junk caches / logs / empty stubs are low -------------------
+    useful = 'possible'
+    junk = any(k in low for k in ('/appdata/', '/cache/', '/caches/', '/temp/',
+                                  '/tmp/', '/node_modules/', '/.git/',
+                                  '/gpuCache/', '/shadercache/', '/crashpad/',
+                                  '/code cache/', '/logs/', '/log/'))
+    if status in ('failed', 'skipped', 'name-only') or chars < 40:
+        useful = 'low'
+    elif ext in ('.log', '.lock', '.map') or (junk and ext in ('.json', '.yaml', '.yml', '.log', '.txt')):
+        useful = 'low'
+    elif junk and size < 4096:
+        useful = 'low'
+    elif category == 'personal' and chars >= 300 and ext in (
+            '.md', '.markdown', '.txt', '.pdf', '.docx', '.doc', '.pptx', '.ppt',
+            '.xlsx', '.epub', '.mobi', '.chm', '.rtf', '.html', '.htm'):
+        useful = 'high'
+    elif chars >= 1500 and ext in ('.pdf', '.epub', '.mobi', '.chm', '.docx', '.pptx'):
+        useful = 'high'
+    elif topic in ('study', 'work', 'reference') and chars >= 300:
+        useful = 'high'
+    return useful, topic
+
+
 def is_probably_dev_junk(name, ext, size):
     # Skip tiny config/lock files in dev caches; keep personal docs regardless.
     if ext in ('.json', '.yaml', '.yml', '.log', '.lock', '.map') and size < 512:
@@ -188,6 +269,8 @@ def wal_scan(roots, max_bytes):
                 full = ent.path
                 if ent.is_dir(follow_symlinks=False):
                     if name in SKIP_DIRS and name not in ALLOW_DIRS:
+                        continue
+                    if name.lower().startswith(SKIP_DIR_PREFIXES):
                         continue
                     walk(full, depth + 1)
                     continue
@@ -228,10 +311,12 @@ CREATE TABLE IF NOT EXISTS docs(
   status TEXT,
   note TEXT,
   head TEXT,
-  body TEXT
+  body TEXT,
+  rule_useful TEXT,
+  rule_topic TEXT
 );
 CREATE VIRTUAL TABLE IF NOT EXISTS fts USING fts5(
-  name, body, content='docs', content_rowid='id', tokenize='trigram'
+  name, body, path, content='docs', content_rowid='id', tokenize='trigram'
 );
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT);
 """
@@ -261,12 +346,21 @@ def main():
     con.executescript(DDL)
     ins = con.execute  # noqa
     insert_sql = ('INSERT OR IGNORE INTO docs'
-                  '(name,path,ext,size,mtime,category,root,chars,status,note,head,body)'
-                  ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
+                  '(name,path,ext,size,mtime,category,root,chars,status,note,head,body,rule_useful,rule_topic)'
+                  ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
     stats = {'scanned': len(files), 'ok': 0, 'empty': 0, 'failed': 0,
              'skipped_large': 0, 'name_only': 0,
-             'by_ext': {}, 'by_root': {}, 'by_category': {}}
+             'by_ext': {}, 'by_root': {}, 'by_category': {},
+             'by_useful': {}, 'by_topic': {}}
     t1 = time.time()
+    # Legacy binary Office (.doc/.ppt/.xls) is extracted with ONE Office COM
+    # instance per application, up front, in a single PowerShell process.
+    # Results are cached by path for the main loop below. 省 time + 省 token.
+    office_text = {}
+    try:
+        office_text = extra_extract.batch_office(files, args.max_chars)
+    except Exception as e:
+        print('office batch unavailable: %s' % e, file=sys.stderr)
     for i, f in enumerate(files):
         ext = '.' + f['ext']
         body, status, note = '', 'ok', ''
@@ -284,13 +378,26 @@ def main():
                     body = res
                 if not body:
                     status = 'empty'
+            elif ext in extra_extract.EXTS:
+                body = extra_extract.extract(f['path'], ext, args.max_chars,
+                                            office_text=office_text)
+                if body is None:
+                    body = ''
+                    status, note = 'name-only', 'extractor-unavailable'
+                elif not body:
+                    status = 'empty'
             else:
-                status = 'name-only'   # .doc/.ppt/.xls legacy: keep path only
+                status = 'name-only'
         except Exception as e:
             status, note = 'failed', ('%s: %s' % (type(e).__name__, e))[:300]
+        if body is None:
+            body = ''
         head = body[:200] if body else ''
+        useful, topic = classify_labels(f['path'], f['name'], ext,
+                                        cat, f['size'], status, len(body), head)
         params = (f['name'], f['path'], f['ext'], f['size'], f['mtime'],
-                  cat, f['root'], len(body), status, note, head, body)
+                  cat, f['root'], len(body), status, note, head, body,
+                  useful, topic)
         con.execute(insert_sql, params)
         bucket = {'ok': 'ok', 'empty': 'empty', 'failed': 'failed',
                   'skipped': 'skipped_large', 'name-only': 'name_only'}[status]
@@ -298,6 +405,8 @@ def main():
         stats['by_ext'][f['ext']] = stats['by_ext'].get(f['ext'], 0) + 1
         stats['by_root'][f['root']] = stats['by_root'].get(f['root'], 0) + 1
         stats['by_category'][cat] = stats['by_category'].get(cat, 0) + 1
+        stats['by_useful'][useful] = stats['by_useful'].get(useful, 0) + 1
+        stats['by_topic'][topic] = stats['by_topic'].get(topic, 0) + 1
         if (i + 1) % 500 == 0:
             con.commit()
     con.commit()
@@ -308,7 +417,7 @@ def main():
     t3 = time.time()
 
     meta = {
-        'version': 1, 'built_at': time.strftime('%Y-%m-%d %H:%M:%S'),
+        'version': 3, 'built_at': time.strftime('%Y-%m-%d %H:%M:%S'),
         'roots': args.roots, 'scan_seconds': round(scan_s, 1),
         'extract_seconds': round(t2 - t1, 1), 'fts_seconds': round(t3 - t2, 1),
         'total_seconds': round(time.time() - t0, 1),
